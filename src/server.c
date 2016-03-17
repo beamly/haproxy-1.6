@@ -896,7 +896,6 @@ int parse_server(const char *file, int linenum, char **args, struct proxy *curpr
 			do_agent = 0;
 			newsrv->flags = 0;
 			newsrv->admin = 0;
-			newsrv->state = SRV_ST_RUNNING; /* early server setup */
 			newsrv->last_change = now.tv_sec;
 			newsrv->id = strdup(args[1]);
 
@@ -969,6 +968,7 @@ int parse_server(const char *file, int linenum, char **args, struct proxy *curpr
  skip_name_resolution:
 			newsrv->addr = *sk;
 			newsrv->xprt  = newsrv->check.xprt = newsrv->agent.xprt = &raw_sock;
+			newsrv->state = curproxy->defsrv.state;
 
 			if (!protocol_by_family(newsrv->addr.ss_family)) {
 				Alert("parsing [%s:%d] : Unknown protocol family %d '%s'\n",
@@ -1023,6 +1023,7 @@ int parse_server(const char *file, int linenum, char **args, struct proxy *curpr
 			newsrv = &curproxy->defsrv;
 			cur_arg = 1;
 			newsrv->resolver_family_priority = AF_INET6;
+			newsrv->state = SRV_ST_RUNNING; /* early server setup */
 		}
 
 		while (*args[cur_arg]) {
@@ -1285,6 +1286,21 @@ int parse_server(const char *file, int linenum, char **args, struct proxy *curpr
 				newsrv->check.state |= CHK_ST_PAUSED;
 				newsrv->check.health = 0;
 				cur_arg += 1;
+			}
+			else if (!strcmp(args[cur_arg], "initial-state")) {
+				if (!strcmp(args[cur_arg + 1], "down"))
+					newsrv->state = SRV_ST_STOPPED;
+				else if (!strcmp(args[cur_arg + 1], "up"))
+					newsrv->state = SRV_ST_RUNNING;
+				else {
+					Alert("parsing [%s:%d]: '%s' expects one of 'up' "
+						"or 'down' but got '%s'\n",
+						file, linenum, args[cur_arg], args[cur_arg + 1]);
+					err_code |= ERR_ALERT | ERR_FATAL;
+					goto out;
+				}
+
+				cur_arg += 2;
 			}
 			else if (!defsrv && !strcmp(args[cur_arg], "observe")) {
 				if (!strcmp(args[cur_arg + 1], "none"))
