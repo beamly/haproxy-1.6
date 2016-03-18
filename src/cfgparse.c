@@ -1885,6 +1885,7 @@ void init_default_instance()
 	defproxy.defsrv.onerror = DEF_HANA_ONERR;
 	defproxy.defsrv.consecutive_errors_limit = DEF_HANA_ERRLIMIT;
 	defproxy.defsrv.uweight = defproxy.defsrv.iweight = 1;
+	defproxy.defsrv.state = SRV_ST_RUNNING;
 
 	defproxy.email_alert.level = LOG_ALERT;
 	defproxy.load_server_state_from_file = PR_SRV_STATE_FILE_UNSPEC;
